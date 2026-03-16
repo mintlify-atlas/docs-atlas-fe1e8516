@@ -1,0 +1,68 @@
+{
+  "projectType": "saas",
+  "projectName": "MyLights Media Browser",
+  "projectDescription": "MyLights is a self-hosted local media browser for managing, searching, and playing video, image, and audio files, built with Next.js and a PHP/MySQL backend.",
+  "theme": "palm",
+  "primaryColor": "#6366F1",
+  "lightColor": "#EEF2FF",
+  "darkColor": "#312E81",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Setup",
+            "pages": ["setup/database", "setup/backend", "setup/frontend"]
+          },
+          {
+            "group": "Features",
+            "pages": ["features/media-browser", "features/search-filter", "features/playlists", "features/liked-history", "features/categories", "features/settings"]
+          },
+          {
+            "group": "Deployment",
+            "pages": ["deployment/local", "deployment/scripts"]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api/overview"]
+          },
+          {
+            "group": "Endpoints",
+            "pages": ["api/search", "api/stats", "api/auth"]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Media grid with support for images, videos, and audio files",
+    "Real-time global search across titles, descriptions, and categories",
+    "Automatic video thumbnail generation via browser-side frame extraction",
+    "Category-based filtering with hierarchical category signatures",
+    "Liked/favourites management persisted in localStorage",
+    "Watch history tracking (last 50 items) in localStorage",
+    "Playlist support",
+    "Database statistics dashboard (total media, size, by-type counts)",
+    "Self-hosted XAMPP-based backend (Apache + MySQL/MariaDB)",
+    "One-command deployment scripts for Windows (PowerShell) and Linux/macOS (bash)"
+  ],
+  "publicApiSurface": [
+    "GET /backend/api/search.php?query=&type= — search media by text and/or type",
+    "GET /backend/api/stats.php — fetch aggregate database statistics",
+    "POST /backend/api/auth.php — user authentication (planned)",
+    "searchMedia(query, type): Promise<MediaItem[]> — frontend API client",
+    "getStats(): Promise<StatsData | null> — frontend stats fetcher",
+    "MediaItem interface — id, title, description, type, signature, url, thumbnail, duration, uploadDate",
+    "StatsData interface — total_media, total_size_mb, avg_size_kb, by_type, latest_upload"
+  ]
+}
