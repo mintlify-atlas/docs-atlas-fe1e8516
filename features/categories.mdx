@@ -1,0 +1,118 @@
+---
+title: "Categories"
+description: "Organise and browse your media library using a hierarchical category system."
+---
+
+Every media item in MyLights Media Browser belongs to a category. Categories are hierarchical — a category can have a parent, forming a tree structure — and the full path from root to leaf is encoded in each item's `signature` field.
+
+## Category signatures
+
+The `signature` field on a `MediaItem` represents the item's full category path, with levels separated by ` > `:
+
+```typescript
+// From frontend/types/media.ts
+interface MediaItem {
+  signature: string; // e.g. "Heilkunde > Natur"
+}
+```
+
+Examples from the application:
+
+| Signature | Meaning |
+|-----------|----------|
+| `Allgemein` | Top-level category |
+| `Natur` | Top-level category |
+| `Heilkunde > Natur` | Natur nested under Heilkunde |
+| `Heilkunde > Kräuter` | Kräuter nested under Heilkunde |
+| `Technik` | Top-level category |
+| `Menschen` | Top-level category |
+| `Kopfschmerzen` | Standalone or nested category |
+
+## Browsing the categories page
+
+The **Categories** page at `/categories` lists all available categories as navigable tiles. Click any category to filter the media grid to items that belong to it.
+
+Parent categories expand to show their children, letting you drill down into the hierarchy visually without typing a search query.
+
+## Filtering by category
+
+You can apply a category filter in two ways:
+
+<Tabs>
+  <Tab title="From the categories page">
+    Navigate to `/categories` in the sidebar, then click any category tile. The grid filters automatically and the URL updates to reflect your selection:
+
+    ```
+    /?cat=Natur
+    ```
+  </Tab>
+  <Tab title="From the search bar">
+    Type a category signature directly into the search bar using the `>` separator. The backend detects the `>` character and applies a signature filter instead of a text search:
+
+    ```
+    Heilkunde > Natur
+    ```
+
+    This returns only items whose `signature` exactly matches `Heilkunde > Natur`.
+  </Tab>
+</Tabs>
+
+## How the backend handles category queries
+
+In `backend/api/search.php`, if the incoming query string contains `>`, it is routed to a category signature filter:
+
+```php
+// backend/api/search.php
+// If query contains '>': treated as category signature filter
+// e.g. "Heilkunde > Natur" filters by category names
+```
+
+For plain text queries without `>`, category name is still searched alongside title and description using a `LIKE` match.
+
+## Default categories
+
+The following categories are configured in the application by default:
+
+<AccordionGroup>
+  <Accordion title="Dashboard categories">
+    Defined in `frontend/app/(dashboard)/page.tsx`:
+
+    ```typescript
+    const categories = ['Allgemein', 'Natur', 'Technik', 'Menschen'];
+    ```
+  </Accordion>
+  <Accordion title="Filter panel categories">
+    Defined in `frontend/constants/filters.ts`:
+
+    ```typescript
+    export const FILTER_CATEGORIES = [
+      {
+        title: 'Kategorie',
+        options: ['Heilkunde', 'Natur', 'Kräuter', 'Kopfschmerzen'],
+      },
+    ];
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Category data structure
+
+Categories are stored in the database with a `parentID` column that enables the hierarchy. A `NULL` or empty `parentID` indicates a top-level category.
+
+```
+ID  | Name         | parentID
+----|--------------|----------
+1   | Heilkunde    | NULL
+2   | Natur        | 1
+3   | Kräuter      | 1
+4   | Allgemein    | NULL
+5   | Technik      | NULL
+6   | Menschen     | NULL
+7   | Kopfschmerzen| NULL
+```
+
+When a media item is indexed, its full category path is resolved and written to the `signature` field by joining ancestor names with ` > `.
+
+<Note>
+  Adding or editing categories is done through the backend administration. The frontend reads category data entirely from the `signature` values returned by the search API.
+</Note>

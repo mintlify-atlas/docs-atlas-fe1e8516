@@ -1,0 +1,151 @@
+---
+title: "Search & Filtering"
+description: "Find media by keyword, type, or category using the search bar and filter panel."
+---
+
+The search and filter system lets you locate any item in your library by text, media type, or category hierarchy. All queries are handled server-side by `backend/api/search.php`.
+
+## Search bar
+
+The search bar is always visible at the top of the media browser. As you type, a new request is sent to the search API and the grid updates in real-time.
+
+Search state is reflected in the URL via the `?q=` query parameter, so search results are shareable and survive page refreshes.
+
+```
+/?q=heilkunde
+```
+
+## How the backend processes queries
+
+`search.php` applies different logic depending on the query string:
+
+<AccordionGroup>
+  <Accordion title="Empty query — return all media">
+    When no query is provided (or `?q=` is empty), the endpoint returns every media item, optionally filtered by type.
+
+    ```
+    GET /backend/api/search.php?type=Foto
+    ```
+  </Accordion>
+  <Accordion title="Category signature filter — using the › syntax">
+    If the query string contains a `>` character, it is treated as a category path filter rather than a text search.
+
+    ```
+    GET /backend/api/search.php?query=Heilkunde+%3E+Natur
+    ```
+
+    This matches items whose `signature` field equals `Heilkunde > Natur`.
+  </Accordion>
+  <Accordion title="Plain text — full-text search">
+    Any query without `>` performs a `LIKE` search across three fields:
+
+    - `title`
+    - `description`
+    - category name
+
+    ```
+    GET /backend/api/search.php?query=wasser
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Type filter
+
+The three media-type tabs (Images, Videos, Sounds) act as a permanent type filter. Selecting a tab appends the corresponding backend type to every search request.
+
+| UI tab | API parameter |
+|--------|---------------|
+| Images | `type=Foto` |
+| Videos | `type=Video` |
+| Sounds | `type=Sound` |
+
+The mapping is defined in `frontend/app/(dashboard)/page.tsx`:
+
+```typescript
+const backendType = {
+  image: 'Foto',
+  video: 'Video',
+  sound: 'Sound',
+};
+```
+
+## Filter panel
+
+The filter panel exposes two filter categories defined in `frontend/constants/filters.ts`:
+
+```typescript
+export const FILTER_CATEGORIES = [
+  {
+    title: 'Medientyp',
+    options: ['Foto', 'Video', 'Audio'],
+  },
+  {
+    title: 'Kategorie',
+    options: ['Heilkunde', 'Natur', 'Kräuter', 'Kopfschmerzen'],
+  },
+];
+```
+
+Selecting a category from the panel appends a `?cat=` parameter to the URL and filters the grid to items belonging to that category.
+
+```
+/?cat=Natur
+```
+
+## Category signature search
+
+Every media item carries a `signature` field that encodes its full category path using the `>` separator:
+
+```typescript
+// From frontend/types/media.ts
+interface MediaItem {
+  signature: string; // e.g. "Heilkunde > Natur"
+}
+```
+
+You can search by signature directly in the search bar:
+
+<Steps>
+  <Step title="Type the parent category">
+    Enter the top-level category name, e.g. `Heilkunde`.
+  </Step>
+  <Step title="Add the separator">
+    Type ` > ` (space, greater-than, space).
+  </Step>
+  <Step title="Type the sub-category">
+    Add the child category, e.g. `Natur`.
+
+    Your full query: `Heilkunde > Natur`
+  </Step>
+  <Step title="View filtered results">
+    The grid immediately shows only items matching that exact category path.
+  </Step>
+</Steps>
+
+<Tip>
+  You can also navigate to a category from the [Categories page](/features/categories) and the correct signature query is applied automatically.
+</Tip>
+
+## API client
+
+All search calls go through `searchMedia()` in `frontend/lib/api-client.ts`:
+
+```typescript
+export async function searchMedia(
+  query: string = '',
+  type: string = ''
+): Promise<MediaItem[]> {
+  const params = new URLSearchParams();
+  if (query) params.append('query', query);
+  if (type) params.append('type', type);
+  const url = `${BASE_URL}/search.php?${params.toString()}`;
+  const response = await fetch(url, { cache: 'no-store' });
+  return await response.json() as MediaItem[];
+}
+```
+
+`cache: 'no-store'` ensures search results are always fresh and never served from the browser cache.
+
+<Note>
+  The API base URL defaults to `http://localhost/backend/api`. To point the frontend at a different backend host, update `BASE_URL` in `frontend/lib/api-client.ts`.
+</Note>

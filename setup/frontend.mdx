@@ -1,0 +1,98 @@
+---
+title: "Frontend setup"
+description: "Install dependencies and run the Next.js frontend for MyLights Media Browser."
+---
+
+## Prerequisites
+
+- **Node.js 18 or later** — [nodejs.org](https://nodejs.org)
+- The backend is deployed and running at `http://localhost/backend/api/` (see [Backend configuration](/setup/backend))
+- `npm` (bundled with Node.js)
+
+## Installation
+
+<Steps>
+  <Step title="Navigate to the frontend directory">
+    ```bash
+    cd frontend
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    npm install
+    ```
+
+    This installs Next.js 16, React 19, Tailwind CSS 4, `@ffmpeg/ffmpeg`, and `lucide-react`, along with all TypeScript type definitions.
+  </Step>
+
+  <Step title="Start the development server">
+    ```bash
+    npm run dev
+    ```
+
+    The app is now available at **`http://localhost:4000`**. The dev server uses port `4000` (configured via the `-p 4000` flag in `package.json`).
+  </Step>
+</Steps>
+
+## Configure the API base URL
+
+All API calls are routed through `frontend/lib/api-client.ts`. The base URL is defined at the top of that file:
+
+```typescript frontend/lib/api-client.ts
+const BASE_URL = 'http://localhost/backend/api';
+```
+
+If your backend is hosted at a different URL (for example, on a remote server or a different local port), update `BASE_URL` to match. Every function in `api-client.ts` derives its endpoint URLs from this constant.
+
+**Example — remote backend:**
+
+```typescript frontend/lib/api-client.ts
+const BASE_URL = 'https://api.example.com/backend/api';
+```
+
+<Note>
+All fetch calls in `api-client.ts` use `cache: 'no-store'` to ensure fresh data on every request. This is intentional for a media browser where content changes frequently.
+</Note>
+
+## npm scripts
+
+| Script | Command | Description |
+|---|---|---|
+| `dev` | `next dev -p 4000` | Starts the development server on port 4000 with hot reload |
+| `build` | `next build` | Compiles and optimizes the app for production |
+| `start` | `next start` | Starts the production server (requires a prior `build`) |
+
+## Build for production
+
+To generate a production build and start the server:
+
+```bash
+npm run build
+npm start
+```
+
+`npm run build` compiles TypeScript, runs the Next.js optimizer, and outputs static assets. `npm start` then serves the optimized build. The production server uses the default Next.js port (`3000`) unless you pass `-p` explicitly.
+
+<Tip>
+Run `npm run build` and review the output for any TypeScript or lint errors before deploying. The build will fail on type errors, catching issues that the dev server may only warn about.
+</Tip>
+
+## Project structure (App Router)
+
+The frontend uses the **Next.js App Router** (`app/` directory convention).
+
+```
+frontend/
+├── app/                  # App Router pages and layouts
+│   ├── layout.tsx        # Root layout (applies to all pages)
+│   └── page.tsx          # Home page route ( / )
+├── lib/
+│   └── api-client.ts     # Typed fetch helpers for all backend endpoints
+├── public/               # Static assets served at the root URL
+├── package.json
+├── tailwind.config.ts
+└── tsconfig.json
+```
+
+Add new pages by creating a `page.tsx` file inside a new folder under `app/`. For example, `app/browse/page.tsx` maps to the route `/browse`. Shared UI components should live in `components/` (create this directory if it does not already exist).

@@ -1,0 +1,76 @@
+---
+title: "Playlists"
+description: "Organize media items into curated playlists for quick access and sequential playback."
+---
+
+Playlists let you group any combination of images, videos, and audio files into named collections. The Playlists page is accessible from the sidebar at `/playlists`.
+
+## Overview
+
+<Columns cols={2}>
+  <Card title="Create playlists" icon="circle-plus">
+    Build collections from any media type — images, videos, and audio can all coexist in a single playlist.
+  </Card>
+  <Card title="Add from the player" icon="play">
+    Add items to a playlist directly from the player overlay without leaving the media browser.
+  </Card>
+</Columns>
+
+## Adding media to a playlist
+
+Media is added to playlists from the player overlay that appears when you click any media card.
+
+<Steps>
+  <Step title="Open a media item">
+    Click any card in the media browser to open the player overlay.
+  </Step>
+  <Step title="Select Add to Playlist">
+    In the overlay action bar, click **Add to Playlist**.
+  </Step>
+  <Step title="Choose or create a playlist">
+    Select an existing playlist from the list, or create a new one by entering a name.
+  </Step>
+  <Step title="Confirm">
+    The item is added immediately. You can continue browsing without closing the overlay.
+  </Step>
+</Steps>
+
+## The Playlists page
+
+Navigate to `/playlists` in the sidebar to manage all your playlists. From this page you can:
+
+- View all playlists and their item counts.
+- Open a playlist to see its contents in a grid layout.
+- Remove items from a playlist.
+- Delete a playlist entirely.
+- Play through a playlist sequentially.
+
+## Playlist count in the stats bar
+
+The total number of playlists you have created is reflected in the stats bar on the main media browser dashboard. The count is fetched from the stats API endpoint:
+
+```typescript
+// From frontend/lib/api-client.ts
+export interface StatsData {
+  total_media: number;
+  total_size_mb: number;
+  avg_size_kb: number;
+  by_type: { image: number; video: number; audio: number; };
+  latest_upload: string;
+}
+```
+
+The dashboard state also tracks the playlist count:
+
+```typescript
+// From frontend/app/(dashboard)/page.tsx
+const [stats, setStats] = useState({
+  videos: 0, images: 0, sounds: 0, total: 0,
+  liked: 0, playlists: 0, categories: 0,
+  totalSize: 0, folders: 1
+});
+```
+
+<Note>
+  Playlists are stored server-side, so they are available across devices and browser sessions — unlike [liked media and watch history](/features/liked-history), which are stored in `localStorage`.
+</Note>

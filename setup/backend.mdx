@@ -1,0 +1,106 @@
+---
+title: "Backend configuration"
+description: "Deploy the PHP backend to XAMPP and configure the database connection."
+---
+
+## Prerequisites
+
+- [XAMPP](https://www.apachefriends.org/) installed with the **Apache** and **MySQL** modules running
+- The `backend/` folder from the project repository
+- Database created and schema imported (see [Database setup](/setup/database))
+
+## Copy the backend to htdocs
+
+The backend must be placed inside XAMPP's web root so Apache can serve it. The path differs by operating system.
+
+<CodeGroup>
+
+```bash Windows
+# Copy the backend folder to the XAMPP web root
+copy backend C:\xampp\htdocs\backend
+```
+
+```bash macOS
+# Copy the backend folder to the XAMPP web root
+cp -r backend /Applications/XAMPP/htdocs/backend
+```
+
+```bash Linux
+# Copy the backend folder to the XAMPP web root
+cp -r backend /opt/lampp/htdocs/backend
+```
+
+</CodeGroup>
+
+After copying, the directory structure inside `htdocs` should look like:
+
+```
+htdocs/
+└── backend/
+    ├── api/
+    │   ├── search.php
+    │   ├── stats.php
+    │   └── ...
+    └── config/
+        └── db.php
+```
+
+## Configure the database connection
+
+Open `backend/config/db.php` and set the connection parameters to match your XAMPP MySQL instance.
+
+```php backend/config/db.php
+<?php
+$host     = 'localhost';
+$user     = 'root';        // MySQL username
+$password = '';            // MySQL password (empty by default in XAMPP)
+$database = 'media_host_db';
+$port     = 3306;          // Use 3307 if another MySQL is already on 3306
+
+$conn = new mysqli($host, $user, $password, $database, $port);
+
+if ($conn->connect_error) {
+    die(json_encode(['error' => 'Connection failed: ' . $conn->connect_error]));
+}
+```
+
+<Note>
+The database name in `db.php` must match the name used when you imported the schema. The canonical name is `media_host_db`. See the [Database setup](/setup/database#database-name) page for details on the `media_host_db` vs `mylights` naming discrepancy.
+</Note>
+
+<Tip>
+If XAMPP is running MySQL on port `3307` (common when another MySQL installation is present), change `$port` to `3307`.
+</Tip>
+
+## Verify the backend is working
+
+With Apache running, open your browser and visit:
+
+```
+http://localhost/backend/api/stats.php
+```
+
+A successful response returns a JSON object with media statistics. If you see a PHP error or a blank page instead, check:
+
+1. Apache is running in the XAMPP Control Panel.
+2. The `backend/` folder is in the correct `htdocs` location.
+3. The credentials and database name in `db.php` are correct.
+
+## CORS
+
+The backend already includes `Access-Control-Allow-Origin: *` headers on all API responses. No additional CORS configuration is needed when running the Next.js frontend on `http://localhost:4000`.
+
+<Warning>
+The wildcard CORS policy (`*`) is suitable for local development only. Before deploying to a production server, restrict the allowed origin to your frontend domain.
+</Warning>
+
+## Available API endpoints
+
+All endpoints are served from the base URL `http://localhost/backend/api/`.
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `stats.php` | `GET` | Returns aggregate media statistics |
+| `search.php` | `GET` | Searches media by `query` and `type` query parameters |
+
+For full request/response schemas and parameter details, see the [API Reference](/api/overview) section.

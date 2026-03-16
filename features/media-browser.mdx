@@ -1,0 +1,120 @@
+---
+title: "Media Browser"
+description: "Browse, preview, and play your entire media library from a unified grid interface."
+---
+
+The media browser is the main dashboard view at `/`. It displays your full media library in a responsive card grid, organized by type across three tabs: Images, Videos, and Sounds.
+
+## Media type tabs
+
+The browser separates media into three tabs, each backed by a filtered API call to `search.php`.
+
+<Columns cols={3}>
+  <Card title="Images" icon="image">
+    Browse all photos and images. Filtered by type `Foto` in the backend.
+  </Card>
+  <Card title="Videos" icon="video">
+    Browse all video files. Filtered by type `Video` in the backend.
+  </Card>
+  <Card title="Sounds" icon="music">
+    Browse all audio files. Filtered by type `Sound` in the backend.
+  </Card>
+</Columns>
+
+Switching tabs immediately triggers a new fetch against the search API with the corresponding type parameter.
+
+## Stats bar
+
+When viewing the Images tab, a stats bar displays a live summary of your library pulled from the API.
+
+| Stat | Source |
+|------|--------|
+| Total media count | `StatsData.total_media` |
+| Total storage size | `StatsData.total_size_mb` (MB) |
+| Liked items | Count from `localStorage` key `liked_media` |
+| Playlists | Playlist count from stats endpoint |
+| Categories | Category count from stats endpoint |
+
+## Media cards
+
+Each item in the grid is rendered by the `MediaCard` component. Every card shows:
+
+- **Thumbnail** — For images, the file thumbnail. For videos, a frame is extracted client-side using `extractThumbnail()` from `lib/thumbnail.ts`. No server-side processing is required.
+- **Title** — The media item's title.
+- **Category signature** — The hierarchical path, e.g. `Heilkunde > Natur`.
+- **Duration** — Shown for video and audio items when available.
+
+### Hover and interaction states
+
+- **Hover**: A play or view icon overlay appears over the thumbnail.
+- **Right-click**: Opens a context menu with actions (add to playlist, edit, etc.).
+- **Batch mode**: Checkboxes appear on each card so you can select multiple items at once.
+
+## Sorting
+
+Sort chips above the grid let you reorder results without a new search:
+
+| Chip | Behavior |
+|------|----------|
+| Neueste | Sort by upload date, newest first |
+| Name | Sort alphabetically by title |
+| Größe | Sort by file size |
+
+## Opening media
+
+Clicking any card opens the player overlay without navigating away from the grid. The overlay adapts to the media type.
+
+<AccordionGroup>
+  <Accordion title="Video playback">
+    A `<video>` element is rendered with `controls`, `playsInline`, and `autoPlay`. The `src` attribute is the item's direct URL.
+
+    ```html
+    <video controls playsInline autoPlay src="{url}" />
+    ```
+  </Accordion>
+  <Accordion title="Image viewer">
+    An `<img>` element is displayed with `object-fit: contain` sizing so the full image is always visible regardless of its aspect ratio.
+  </Accordion>
+  <Accordion title="Audio playback">
+    An `<audio>` element is rendered with `controls` and `autoPlay`.
+
+    ```html
+    <audio controls autoPlay src="{url}" />
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Player overlay actions
+
+While media is open, the overlay exposes three actions:
+
+- **Add to Favourites** — Toggles the liked state for this item (stored in `localStorage`).
+- **Edit** — Opens the edit form for the media item's metadata.
+- **Add to Playlist** — Adds the item to an existing or new playlist.
+
+<Note>
+  Opening any media card automatically records the item in your watch history. History is stored in `localStorage` under the key `media_history` and retains the last 50 items.
+</Note>
+
+## Thumbnail generation for videos
+
+Video thumbnails are extracted entirely in the browser. The `extractThumbnail()` utility in `lib/thumbnail.ts` loads the video file, seeks to a representative frame, and draws it to an off-screen canvas to produce a data URL. This means thumbnails are available instantly without any backend processing or pre-generation step.
+
+<Tip>
+  Thumbnail extraction runs lazily as cards enter the viewport, so scrolling through large video libraries remains smooth even on modest hardware.
+</Tip>
+
+## API mapping
+
+The browser maps the frontend tab names to the backend type values expected by `search.php`:
+
+```typescript
+// frontend/app/(dashboard)/page.tsx
+const backendType = {
+  image: 'Foto',
+  video: 'Video',
+  sound: 'Sound',
+};
+```
+
+An empty search query returns all media of the selected type. See [Search & Filtering](/features/search-filter) for advanced query behavior.

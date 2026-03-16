@@ -1,0 +1,88 @@
+---
+title: "Auth"
+description: "Planned user authentication endpoint — not yet implemented."
+---
+
+<Warning>
+This endpoint is **not yet implemented**. The `auth.php` file currently exists but is empty (0 bytes). No authentication is enforced on any API endpoint at this time.
+</Warning>
+
+## Endpoint
+
+```
+POST http://localhost/backend/api/auth.php
+```
+
+When implemented, this endpoint will accept a username and password and return a session token or similar credential for authenticating subsequent requests.
+
+## Current state
+
+All API endpoints (`search.php`, `stats.php`) are currently accessible without any credentials. CORS is set to `Access-Control-Allow-Origin: *` on every endpoint.
+
+The database schema already includes the tables required for authentication:
+
+### `users` table
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `userID` | int (PK) | Unique user identifier. |
+| `username` | varchar | Login username. |
+| `password_hash` | varchar | Bcrypt or similar hashed password. |
+| `email` | varchar | User email address. |
+| `roleID` | int (FK) | Reference to the `roles` table. |
+
+### `roles` table
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `roleID` | int (PK) | Unique role identifier. |
+| `role_name` | varchar | Name of the role (e.g. `admin`, `viewer`). |
+| `description` | varchar | Human-readable description of the role. |
+
+## Planned request
+
+<Note>
+The request format below is a design proposal and may change when the endpoint is implemented.
+</Note>
+
+**Method:** `POST`
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "username": "alice",
+  "password": "correct-horse-battery-staple"
+}
+```
+
+### Planned parameters
+
+<ParamField body="username" type="string" required>
+  The account username.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The account password in plain text. The backend will compare against the stored `password_hash`.
+</ParamField>
+
+## Planned response
+
+A successful authentication response is expected to include a token or session identifier that can be passed on subsequent requests.
+
+```json
+{
+  "token": "<session-token>",
+  "userID": 1,
+  "username": "alice",
+  "role": "admin"
+}
+```
+
+### Planned error responses
+
+| HTTP status | Condition |
+|-------------|----------|
+| `401 Unauthorized` | Invalid username or password. |
+| `400 Bad Request` | Missing `username` or `password` field. |
+| `500 Internal Server Error` | Database or server error. |

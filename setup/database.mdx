@@ -1,0 +1,133 @@
+---
+title: "Database setup"
+description: "Create the MySQL database and import the schema using phpMyAdmin or the MySQL CLI."
+---
+
+## Prerequisites
+
+- [XAMPP](https://www.apachefriends.org/) installed with the **MySQL** module running
+- Access to **phpMyAdmin** at `http://localhost/phpmyadmin`
+- The `db/main.sql` file from the project repository
+
+<Note>
+MySQL must be started in the XAMPP Control Panel before proceeding. Look for a green "Running" indicator next to the MySQL module.
+</Note>
+
+## Create the database
+
+<Steps>
+  <Step title="Open phpMyAdmin">
+    Navigate to `http://localhost/phpmyadmin` in your browser and log in with your MySQL credentials (default: user `root`, no password).
+  </Step>
+
+  <Step title="Import the schema">
+    Click the **Import** tab in the top navigation bar, then select **Choose File** and upload `db/main.sql` from the project root. Leave all other settings at their defaults and click **Go**.
+
+    `main.sql` runs `CREATE DATABASE IF NOT EXISTS media_host_db` and then creates all six tables. No manual database creation step is required.
+  </Step>
+
+  <Step title="Verify the import">
+    After the import completes, select the **media\_host\_db** database from the left sidebar. You should see the following six tables listed:
+
+    - `roles`
+    - `users`
+    - `media_type`
+    - `media`
+    - `category`
+    - `media_category`
+  </Step>
+
+  <Step title="(Optional) Import mock data">
+    To seed the database with sample records for development, import `db/mock_data.sql` using the same **Import** tab. Select `media_host_db` from the sidebar first so the data is inserted into the correct database.
+  </Step>
+</Steps>
+
+## Table schema overview
+
+The schema defines six tables. The diagram below describes their columns, types, and relationships.
+
+### `roles`
+
+| Column | Type | Notes |
+|---|---|---|
+| `roleID` | `INT` | Primary key, auto-increment |
+| `role_name` | `VARCHAR(50)` | Unique |
+| `description` | `VARCHAR(255)` | Optional |
+
+### `users`
+
+| Column | Type | Notes |
+|---|---|---|
+| `userID` | `INT` | Primary key, auto-increment |
+| `username` | `VARCHAR(50)` | Unique |
+| `password_hash` | `VARCHAR(255)` | Bcrypt or equivalent hash |
+| `email` | `VARCHAR(255)` | Unique |
+| `roleID` | `INT` | FK → `roles.roleID` |
+
+### `media_type`
+
+| Column | Type | Notes |
+|---|---|---|
+| `media_typeID` | `INT` | Primary key, auto-increment |
+| `name` | `VARCHAR(50)` | Unique (e.g. `video`, `image`) |
+| `mime_type` | `VARCHAR(100)` | Optional (e.g. `video/mp4`) |
+
+### `media`
+
+| Column | Type | Notes |
+|---|---|---|
+| `mediaID` | `INT` | Primary key, auto-increment |
+| `title` | `VARCHAR(150)` | Required |
+| `description` | `TEXT` | Optional |
+| `file_path` | `VARCHAR(255)` | Path relative to the upload root |
+| `file_size_kb` | `INT` | Defaults to `0` |
+| `upload_date` | `DATETIME` | Defaults to `CURRENT_TIMESTAMP` |
+| `media_typeID` | `INT` | FK → `media_type.media_typeID` |
+
+### `category`
+
+| Column | Type | Notes |
+|---|---|---|
+| `categoryID` | `INT` | Primary key, auto-increment |
+| `name` | `VARCHAR(100)` | Required |
+| `parentID` | `INT` | Self-referencing FK for nested categories; nullable |
+
+### `media_category`
+
+| Column | Type | Notes |
+|---|---|---|
+| `mediaID` | `INT` | FK → `media.mediaID` |
+| `categoryID` | `INT` | FK → `category.categoryID` |
+
+The composite primary key `(mediaID, categoryID)` enforces a unique many-to-many relationship between media items and categories.
+
+## Database name
+
+<Warning>
+The canonical database name defined in `db/main.sql` is **`media_host_db`**. Some older documentation references the name `mylights` — this is outdated. Use `media_host_db` for all new setups.
+</Warning>
+
+If you have an existing installation that uses `mylights`, you can either rename the database in phpMyAdmin or update the `database` field in `backend/config/db.php` to match whichever name you used during import.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="MySQL is running on port 3307 instead of 3306">
+    XAMPP sometimes defaults to port `3307` when another MySQL installation is already present on the system. To connect on the non-standard port, update the `port` field in `backend/config/db.php`:
+
+    ```php db.php
+    $port = 3307;
+    $conn = new mysqli($host, $user, $password, $database, $port);
+    ```
+
+    In phpMyAdmin, go to **config.inc.php** (or the XAMPP phpMyAdmin configuration) and set `$cfg['Servers'][$i]['port'] = '3307';`.
+  </Accordion>
+
+  <Accordion title="Access denied for user 'root'">
+    If you set a MySQL root password in XAMPP, supply it when connecting in phpMyAdmin and in `db.php`. Leave the password field empty only if no password was configured.
+  </Accordion>
+
+  <Accordion title="Import fails with a table already exists error">
+    `main.sql` uses `CREATE TABLE IF NOT EXISTS` for every table, so re-importing the file is safe and will not fail. If you see a different duplicate-object error, drop the existing `media_host_db` database from phpMyAdmin and re-import.
+  </Accordion>
+</AccordionGroup>

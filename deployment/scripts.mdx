@@ -1,0 +1,140 @@
+---
+title: "Deploy scripts"
+description: "Automate copying the PHP backend to XAMPP's htdocs directory using deploy.sh or deploy.ps1."
+---
+
+The project includes two deployment scripts in the repository root that automate the most repetitive step in the local workflow: copying `backend/` into the XAMPP web root after making changes.
+
+<Columns cols={2}>
+  <Card title="deploy.sh" icon="terminal">
+    Bash script for Linux, macOS, and Windows Git Bash.
+  </Card>
+  <Card title="deploy.ps1" icon="square-terminal">
+    PowerShell script for Windows (native PowerShell, not Git Bash).
+  </Card>
+</Columns>
+
+## When to use the scripts
+
+Use the deploy scripts any time you modify PHP files inside `backend/` and need to push those changes into XAMPP's `htdocs` so Apache picks them up. Common scenarios:
+
+- You edited an API endpoint and want to test the change.
+- You added a new PHP file to `backend/api/`.
+- You pulled upstream changes that include backend updates.
+
+For the initial setup or one-off deploys, you can also copy files manually — see [Local deployment](/deployment/local).
+
+## deploy.sh
+
+`deploy.sh` is a Bash script. It runs on Linux, macOS, and Windows when using **Git Bash**.
+
+### Full source
+
+```bash deploy.sh
+#!/bin/bash
+
+# Define source and destination
+SOURCE="./backend"
+DEST="/c/xampp/htdocs"
+
+# 1. Check if the source folder exists
+if [ -d "$SOURCE" ]; then
+    echo "Copying $SOURCE to $DEST..."
+    cp -r "$SOURCE" "$DEST"
+    echo "Done! Your backend is now at $DEST/backend"
+else
+    echo "Error: $SOURCE folder not found!"
+    exit 1
+fi
+```
+
+### What it does
+
+1. Defines `SOURCE` as `./backend` (relative to where the script is run) and `DEST` as `/c/xampp/htdocs`.
+2. Checks that the `backend/` folder exists before doing anything. If it's missing, the script exits with a non-zero status and prints an error.
+3. Copies `backend/` and all its contents recursively into `DEST` using `cp -r`.
+4. Prints a confirmation message with the final path.
+
+### How to run it
+
+Run the script from the project root (the directory that contains `backend/`):
+
+```bash
+bash deploy.sh
+```
+
+On Linux and macOS you can also make it executable and run it directly:
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+### Default DEST path
+
+The default `DEST` is `/c/xampp/htdocs`. This is the **Git Bash path** for `C:\xampp\htdocs` on Windows — Git Bash maps Windows drive letters to `/c/`, `/d/`, etc.
+
+<Note>
+On Linux and macOS, `/c/xampp/htdocs` does not exist. You must update the `DEST` variable before running the script on those platforms. See [Customizing the destination path](#customizing-the-destination-path) below.
+</Note>
+
+## deploy.ps1
+
+`deploy.ps1` is the Windows PowerShell equivalent of `deploy.sh`. It performs the same operation — copying `backend/` into the XAMPP `htdocs` directory — using native PowerShell cmdlets.
+
+### How to run it
+
+Open **PowerShell** (not Git Bash) in the project root and run:
+
+```powershell
+.\deploy.ps1
+```
+
+If you see an error about execution policy, run PowerShell as Administrator and allow local scripts:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+
+Then retry `.\deploy.ps1`.
+
+<Note>
+Use `deploy.ps1` when you are running PowerShell natively. If you are using Git Bash or WSL, use `deploy.sh` instead.
+</Note>
+
+## Customizing the destination path
+
+If your XAMPP installation is not at the default location, update the `DEST` variable at the top of the script before running it.
+
+<CodeGroup>
+
+```bash deploy.sh — macOS
+# Change DEST to the macOS htdocs path
+DEST="/Applications/XAMPP/htdocs"
+```
+
+```bash deploy.sh — Linux
+# Change DEST to the Linux htdocs path
+DEST="/opt/lampp/htdocs"
+```
+
+```bash deploy.sh — Windows (custom XAMPP path)
+# Change DEST if XAMPP is installed on a different drive
+DEST="/d/xampp/htdocs"
+```
+
+</CodeGroup>
+
+For `deploy.ps1`, find the equivalent destination variable near the top of the file and update it to the correct Windows path, for example `D:\xampp\htdocs`.
+
+## Script vs. manual copy
+
+| Method | Best for |
+|---|---|
+| `deploy.sh` / `deploy.ps1` | Repeated backend edits during development |
+| Manual copy | Initial setup or one-off changes |
+| XAMPP `htdocs` as working directory | Not recommended — version control becomes harder |
+
+<Tip>
+For an even faster iteration loop, point your editor directly at the files inside `htdocs/backend/` after the first deploy. Changes will be served by Apache immediately without needing to re-run the script.
+</Tip>

@@ -1,0 +1,101 @@
+---
+title: "Liked Media & Watch History"
+description: "Track your favourite items and revisit recently viewed media with Liked and History."
+---
+
+MyLights Media Browser keeps two personal collections entirely client-side using `localStorage`: your liked/favourited items and your watch history. Both are accessible from the sidebar.
+
+## Liked media
+
+The **Liked** page at `/liked` shows every media item you have marked as a favourite.
+
+### How liking works
+
+Liked items are stored in `localStorage` under the key `liked_media` as a JSON array of full `MediaItem` objects.
+
+```typescript
+// From frontend/app/(dashboard)/page.tsx
+const toggleFavorite = (media: MediaItem) => {
+  const savedLiked = localStorage.getItem('liked_media');
+  let likedArr = savedLiked ? JSON.parse(savedLiked) : [];
+  const isLiked = likedArr.some((item: any) => item.id === media.id);
+  if (isLiked) {
+    likedArr = likedArr.filter((item: any) => item.id !== media.id);
+  } else {
+    likedArr.push(media);
+  }
+  localStorage.setItem('liked_media', JSON.stringify(likedArr));
+};
+```
+
+Toggling is idempotent: liking an already-liked item removes it, and liking an unliked item adds it.
+
+### Liking an item
+
+<Steps>
+  <Step title="Open a media item">
+    Click any card in the media browser to open the player overlay.
+  </Step>
+  <Step title="Click Add to Favourites">
+    In the overlay action bar, click **Add to Favourites**. The button state updates immediately to reflect the new liked status.
+  </Step>
+  <Step title="View liked items">
+    Navigate to **Liked** in the sidebar to see all your favourited media in a grid.
+  </Step>
+</Steps>
+
+### Unliking an item
+
+To remove an item from your liked collection, open the player overlay for that item and click **Add to Favourites** again. The item is removed from `liked_media` in `localStorage` and disappears from the `/liked` page.
+
+<Warning>
+  Liked media is stored in your browser's `localStorage`. Clearing your browser data or using a different browser or device will result in an empty liked list.
+</Warning>
+
+## Watch history
+
+The **History** page at `/history` shows a chronological list of recently viewed media.
+
+### How history is recorded
+
+History is stored in `localStorage` under the key `media_history` and is updated automatically every time you click a media card — no manual action is needed.
+
+- The list retains a maximum of **50 items**.
+- Items are stored as full `MediaItem` objects.
+- When the 50-item limit is reached, the oldest entry is dropped to make room for the newest.
+
+```typescript
+// From frontend/app/(dashboard)/page.tsx
+// handleMediaClick: opens player overlay, adds to history (localStorage)
+// history: keeps last 50 items in localStorage key 'media_history'
+```
+
+### Viewing your history
+
+Navigate to **History** in the sidebar to see your most recently viewed items, newest first. Each card shows the same thumbnail, title, and category signature as in the main browser.
+
+<Tip>
+  History is a good way to return to something you watched earlier without needing to search for it again.
+</Tip>
+
+<Warning>
+  Watch history is stored in your browser's `localStorage`. Clearing browser data, switching browsers, or using a different device will result in an empty history.
+</Warning>
+
+## localStorage reference
+
+| Key | Content | Limit |
+|-----|---------|-------|
+| `liked_media` | JSON array of `MediaItem` objects | No hard limit |
+| `media_history` | JSON array of `MediaItem` objects | 50 items |
+
+## Related pages
+
+<Columns cols={2}>
+  <Card title="Media Browser" icon="grid-2" href="/features/media-browser">
+    Learn how clicking a card opens the player overlay and records history.
+  </Card>
+  <Card title="Playlists" icon="list-music" href="/features/playlists">
+    Playlists are stored server-side and are not subject to the localStorage limitations.
+  </Card>
+</Columns>

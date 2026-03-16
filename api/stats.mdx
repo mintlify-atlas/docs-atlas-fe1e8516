@@ -1,0 +1,108 @@
+---
+title: "Stats"
+description: "Retrieve aggregate statistics about the media library using the GET /stats.php endpoint."
+---
+
+## Endpoint
+
+```
+GET http://localhost/backend/api/stats.php
+```
+
+Returns a single JSON object with aggregate counts and size metrics for the entire media library. No query parameters are accepted.
+
+## Response
+
+HTTP `200` with a JSON object.
+
+<ResponseField name="total_media" type="integer" required>
+  Total number of media records in the `media` table.
+</ResponseField>
+
+<ResponseField name="total_size_mb" type="number" required>
+  Sum of all file sizes in megabytes, calculated as `SUM(file_size_kb) / 1024` and rounded to 2 decimal places.
+</ResponseField>
+
+<ResponseField name="avg_size_kb" type="number" required>
+  Average file size in kilobytes across all media records, rounded to 2 decimal places.
+</ResponseField>
+
+<ResponseField name="by_type" type="object" required>
+  Count of media items broken down by type.
+
+  <Expandable title="properties" defaultOpen={true}>
+    <ResponseField name="video" type="integer" required>
+      Number of media items with type `video`.
+    </ResponseField>
+
+    <ResponseField name="image" type="integer" required>
+      Number of media items with type `image`.
+    </ResponseField>
+
+    <ResponseField name="audio" type="integer" required>
+      Number of media items with type `audio`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="latest_upload" type="string" required>
+  Datetime string of the most recently uploaded media item, as returned by `MAX(upload_date)`. Format: `YYYY-MM-DD HH:MM:SS`.
+</ResponseField>
+
+<Note>
+`total_size_mb` and `avg_size_kb` depend on a `file_size_kb` column in the `media` table. If that column does not exist (e.g. on older schema versions), `stats.php` handles the error and falls back gracefully — those fields may return `0` or `null`.
+</Note>
+
+## Error response
+
+HTTP `500` on unhandled database errors:
+
+```json
+{
+  "error": "Internal Server Error",
+  "message": "SQLSTATE[42S22]: Column not found: ...",
+  "trace": "#0 /var/www/html/backend/api/stats.php(12): ..."
+}
+```
+
+## Examples
+
+### curl
+
+```bash
+curl "http://localhost/backend/api/stats.php"
+```
+
+### Example response
+
+```json
+{
+  "total_media": 142,
+  "total_size_mb": 3817.54,
+  "avg_size_kb": 27546.23,
+  "by_type": {
+    "video": 58,
+    "image": 71,
+    "audio": 13
+  },
+  "latest_upload": "2026-03-15 14:22:07"
+}
+```
+
+### TypeScript
+
+```typescript
+import { getStats } from '@/lib/api-client';
+import type { StatsData } from '@/lib/api-client';
+
+const stats: StatsData | null = await getStats();
+
+if (stats) {
+  console.log(`Total media: ${stats.total_media}`);
+  console.log(`Library size: ${stats.total_size_mb} MB`);
+  console.log(`Videos: ${stats.by_type.video}`);
+  console.log(`Images: ${stats.by_type.image}`);
+  console.log(`Audio: ${stats.by_type.audio}`);
+  console.log(`Last upload: ${stats.latest_upload}`);
+}
+```

@@ -1,0 +1,253 @@
+---
+title: "Local deployment"
+description: "Deploy MyLights on your own machine using XAMPP for the PHP backend and MySQL database."
+---
+
+MyLights runs entirely on your local machine. XAMPP provides Apache (to serve the PHP API) and MySQL (to store media metadata). The Next.js frontend runs as a separate dev server on port 4000.
+
+## Architecture
+
+```
+Browser (localhost:4000)
+    │
+    ├─── Next.js frontend (port 4000)
+    │         │
+    │         └─── HTTP requests to /backend/api/*
+    │
+    └─── Apache (port 80)  ←── XAMPP
+              │
+              └─── PHP API  →  MySQL/MariaDB  ←── XAMPP
+```
+
+## Prerequisites
+
+- **[XAMPP](https://www.apachefriends.org/)** with Apache and MySQL modules available
+- **[Node.js 18+](https://nodejs.org/)** — run `node --version` to confirm
+- **[Git](https://git-scm.com/)** — to clone the repository
+
+## Deployment walkthrough
+
+<Steps>
+
+<Step title="Clone the repository">
+
+```bash
+git clone https://github.com/HardBoss07/m106-media-project.git
+cd m106-media-project
+```
+
+This gives you the full project structure:
+
+```
+m106-media-project/
+├── backend/         ← PHP API files
+├── db/              ← SQL schema and mock data
+├── frontend/        ← Next.js app
+├── deploy.ps1       ← Windows deployment script
+└── deploy.sh        ← Linux/macOS deployment script
+```
+
+</Step>
+
+<Step title="Start XAMPP">
+
+Open the **XAMPP Control Panel** and start both the **Apache** and **MySQL** modules. Both status indicators should turn green before continuing.
+
+<Warning>
+If another web server (IIS, nginx) is already using port 80, Apache will fail to start. Stop the conflicting service or change XAMPP's Apache port in `httpd.conf` before proceeding.
+</Warning>
+
+</Step>
+
+<Step title="Set up the database">
+
+1. Navigate to `http://localhost/phpmyadmin` and log in (default: user `root`, no password).
+2. Click the **Import** tab in the top navigation bar.
+3. Click **Choose File**, select `db/main.sql` from the project root, and click **Go**.
+
+`main.sql` runs `CREATE DATABASE IF NOT EXISTS media_host_db` and creates all six tables automatically. No manual database creation is needed.
+
+<Note>
+To pre-populate the database with sample media and user accounts for development, import `db/mock_data.sql` as a second import step using the same **Import** tab. Select the `media_host_db` database from the left sidebar first.
+</Note>
+
+After import, verify in phpMyAdmin that `media_host_db` appears in the left sidebar with these six tables:
+
+- `roles`
+- `users`
+- `media_type`
+- `media`
+- `category`
+- `media_category`
+
+</Step>
+
+<Step title="Copy the backend to htdocs">
+
+Apache can only serve PHP files placed inside the XAMPP web root (`htdocs`). Copy the entire `backend/` folder there.
+
+The `htdocs` path differs by operating system:
+
+<CodeGroup>
+
+```bash Windows (Command Prompt)
+xcopy /E /I backend C:\xampp\htdocs\backend
+```
+
+```bash Windows (Git Bash)
+cp -r backend /c/xampp/htdocs/
+```
+
+```bash macOS
+cp -r backend /Applications/XAMPP/htdocs/
+```
+
+```bash Linux
+cp -r backend /opt/lampp/htdocs/
+```
+
+</CodeGroup>
+
+Alternatively, use the [deploy scripts](/deployment/scripts) included in the project root to automate this step.
+
+After copying, the directory structure inside `htdocs` should look like:
+
+```
+htdocs/
+└── backend/
+    ├── api/
+    │   ├── search.php
+    │   ├── stats.php
+    │   └── ...
+    └── config/
+        └── db.php
+```
+
+</Step>
+
+<Step title="Configure the database connection">
+
+Open `backend/config/db.php` (inside `htdocs` after copying) and verify the credentials match your XAMPP MySQL instance:
+
+```php backend/config/db.php
+<?php
+$host     = 'localhost';
+$user     = 'root';        // default XAMPP MySQL username
+$password = '';            // empty by default in XAMPP
+$database = 'media_host_db';
+$port     = 3306;          // use 3307 if another MySQL is already on 3306
+
+$conn = new mysqli($host, $user, $password, $database, $port);
+```
+
+<Tip>
+If you set a MySQL root password during XAMPP setup, add it to the `$password` field. The XAMPP default is an empty password.
+</Tip>
+
+</Step>
+
+<Step title="Install frontend dependencies">
+
+```bash
+cd frontend
+npm install
+```
+
+</Step>
+
+<Step title="Start the frontend">
+
+<Tabs>
+  <Tab title="Development">
+
+```bash
+npm run dev
+```
+
+Starts the Next.js dev server on port 4000 with hot reload enabled. Use this during active development.
+
+  </Tab>
+  <Tab title="Production">
+
+```bash
+npm run build
+npm start
+```
+
+Builds an optimized production bundle and starts the Next.js production server. Use this when you want a stable, performant local instance.
+
+  </Tab>
+</Tabs>
+
+</Step>
+
+</Steps>
+
+## Verify the setup
+
+Once Apache, MySQL, and the frontend server are all running, confirm each layer is working:
+
+| Check | URL | Expected result |
+|---|---|---|
+| Frontend | `http://localhost:4000` | MyLights UI loads |
+| Backend API | `http://localhost/backend/api/stats.php` | Returns a JSON object with media statistics |
+| Database | `http://localhost/phpmyadmin` | `media_host_db` visible with six tables |
+
+<Note>
+If you imported `db/mock_data.sql`, the media grid on the frontend home page should display sample entries immediately without any additional configuration.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+
+  <Accordion title="Apache fails to start (port 80 conflict)">
+    Another process — commonly IIS on Windows or an existing Apache/nginx on Linux — is already bound to port 80. Either stop that service or change XAMPP's Apache listen port:
+
+    1. In the XAMPP Control Panel, click **Config** next to Apache and open `httpd.conf`.
+    2. Change `Listen 80` to an unused port such as `Listen 8080`.
+    3. Restart Apache.
+
+    After changing the port, update all backend URLs accordingly (e.g. `http://localhost:8080/backend/api/`).
+  </Accordion>
+
+  <Accordion title="MySQL is running on port 3307 instead of 3306">
+    XAMPP defaults to port `3307` when another MySQL installation already occupies port `3306`. Update `backend/config/db.php` to use the correct port:
+
+    ```php db.php
+    $port = 3307;
+    $conn = new mysqli($host, $user, $password, $database, $port);
+    ```
+
+    You can confirm the active MySQL port in the XAMPP Control Panel next to the MySQL status line.
+  </Accordion>
+
+  <Accordion title="Database connection errors (blank page or 500 from API)">
+    Open `http://localhost/backend/api/stats.php` directly. If you see a PHP error about `mysqli` or connection refused:
+
+    1. Confirm the MySQL module is running in the XAMPP Control Panel.
+    2. Verify the `$database` field in `db.php` matches the imported database name (`media_host_db`).
+    3. Verify `$user`, `$password`, and `$port` match your XAMPP MySQL settings.
+    4. Check that the `backend/` folder is inside `htdocs`, not alongside it.
+  </Accordion>
+
+  <Accordion title="Frontend shows an empty media grid">
+    The frontend fetches data from `http://localhost/backend/api/`. If the grid is empty:
+
+    1. Confirm Apache is running.
+    2. Open `http://localhost/backend/api/stats.php` in a browser — it should return JSON, not a 404.
+    3. If you haven't imported `db/mock_data.sql`, the database is empty by design. Import mock data or add media through the UI.
+    4. Check the browser console for CORS errors — if present, verify `backend/` is served directly from `htdocs` (not a subdirectory of a subdirectory).
+  </Accordion>
+
+  <Accordion title="'npm run dev' fails or port 4000 is already in use">
+    If port 4000 is occupied, the `next dev -p 4000` command will exit with an EADDRINUSE error. Stop the process using that port or specify a different one:
+
+    ```bash
+    npx next dev -p 4001
+    ```
+
+    Note that changing the port may require updating the API base URL in the frontend environment configuration.
+  </Accordion>
+
+</AccordionGroup>

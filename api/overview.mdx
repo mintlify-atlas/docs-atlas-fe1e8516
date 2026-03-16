@@ -1,0 +1,113 @@
+---
+title: "API Overview"
+description: "Base URL, request format, authentication, and available endpoints for the MyLights Media Browser API."
+---
+
+The MyLights Media Browser API is a locally-hosted REST API that powers media search, statistics, and (in future) authentication. All endpoints are served from the PHP backend and return JSON.
+
+<Warning>
+This API is designed for local network use only. It is not hardened for public internet exposure — CORS is open (`*`), there is no rate limiting, and authentication is not yet enforced.
+</Warning>
+
+## Base URL
+
+```
+http://localhost/backend/api
+```
+
+All endpoint paths below are relative to this base URL.
+
+## Request format
+
+- All current endpoints accept **GET** requests only.
+- Parameters are passed as **query string** values.
+- No request body or special headers are required.
+
+## Response format
+
+All responses use `Content-Type: application/json; charset=UTF-8`.
+
+Successful responses return either a JSON object or a JSON array depending on the endpoint.
+
+### Error format
+
+Endpoints return HTTP `500` on unexpected errors, with a JSON body:
+
+```json
+{
+  "error": "Internal Server Error",
+  "message": "PDOException: ...",
+  "trace": "#0 ..."
+}
+```
+
+## Authentication
+
+<Note>
+Authentication is not currently implemented. All endpoints are publicly accessible to any client on the local network. See the [Auth endpoint](/api/auth) page for details on the planned implementation.
+</Note>
+
+CORS headers are set to `Access-Control-Allow-Origin: *` on every endpoint, so browser-based clients can call the API without restriction.
+
+## Endpoints
+
+<Columns cols={3}>
+  <Card title="Search" icon="magnifying-glass" href="/api/search">
+    Search media items by title, description, category, or type.
+  </Card>
+  <Card title="Stats" icon="chart-bar" href="/api/stats">
+    Retrieve aggregate statistics about the media library.
+  </Card>
+  <Card title="Auth" icon="lock" href="/api/auth">
+    User authentication — planned, not yet implemented.
+  </Card>
+</Columns>
+
+## TypeScript client
+
+The frontend ships an `api-client.ts` module that wraps the endpoints with typed functions. Import and use it instead of calling `fetch` directly.
+
+```typescript
+import { searchMedia, getStats } from '@/lib/api-client';
+```
+
+### `searchMedia(query?, type?)`
+
+Fetches media items matching the given search parameters.
+
+```typescript
+export async function searchMedia(
+  query: string = '',
+  type: string = ''
+): Promise<MediaItem[]>
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `query` | `string` | Free-text search or category signature (e.g. `"Heilkunde > Natur"`). |
+| `type` | `string` | Localized type filter: `"Foto"`, `"Video"`, or `"Sound"`. |
+
+Returns a `MediaItem[]` array. Throws on a non-OK HTTP response.
+
+### `getStats()`
+
+Fetches aggregate library statistics.
+
+```typescript
+export async function getStats(): Promise<StatsData | null>
+```
+
+Returns a `StatsData` object or `null`. Throws on a non-OK HTTP response.
+
+### Example
+
+```typescript
+import { searchMedia, getStats } from '@/lib/api-client';
+
+// Fetch all videos matching "Natur"
+const results = await searchMedia('Natur', 'Video');
+
+// Fetch library statistics
+const stats = await getStats();
+console.log(`Total media: ${stats?.total_media}`);
+```

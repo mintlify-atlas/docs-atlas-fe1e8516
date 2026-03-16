@@ -1,0 +1,90 @@
+---
+title: "Settings"
+description: "Configure application behaviour, API connection, and database connection for MyLights Media Browser."
+---
+
+The Settings page is accessible from the sidebar at `/settings`. It provides controls for application-level configuration.
+
+<Note>
+  The Settings page is in active development. The sections below document both the in-app settings surface and the file-based configuration options available to administrators.
+</Note>
+
+## In-app settings
+
+The `/settings` page exposes user-facing preferences for the media browser. As the feature set grows, additional options will appear here. Check this page for the latest controls available in your installation.
+
+## API connection configuration
+
+The frontend communicates with the PHP backend through a single base URL constant defined in `frontend/lib/api-client.ts`:
+
+```typescript
+// frontend/lib/api-client.ts
+const BASE_URL = 'http://localhost/backend/api';
+```
+
+To point the frontend at a different backend host — for example when deploying to a server instead of running locally — update `BASE_URL` to the correct address.
+
+<Warning>
+  `BASE_URL` is a compile-time constant. After changing it you must rebuild the frontend for the new value to take effect.
+</Warning>
+
+### Available API endpoints
+
+All frontend data fetching goes through `api-client.ts`. The key endpoints under `BASE_URL` are:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/search.php` | Search and list media items |
+| `/stats.php` | Fetch library statistics |
+
+## Database connection configuration
+
+The backend reads its database credentials from `backend/config/db.php`. Edit this file to change the host, database name, username, or password:
+
+```php
+// backend/config/db.php
+// Configure your MySQL/MariaDB connection here:
+// - DB host
+// - DB name
+// - DB user
+// - DB password
+```
+
+<Warning>
+  Keep `backend/config/db.php` out of version control and away from public web access. It contains sensitive credentials.
+</Warning>
+
+## Configuration reference
+
+<AccordionGroup>
+  <Accordion title="Frontend: changing the API host">
+    1. Open `frontend/lib/api-client.ts`.
+    2. Update the `BASE_URL` constant to your backend address:
+
+       ```typescript
+       const BASE_URL = 'https://your-server.example.com/backend/api';
+       ```
+
+    3. Rebuild the frontend:
+
+       ```bash
+       npm run build
+       ```
+  </Accordion>
+  <Accordion title="Backend: changing database credentials">
+    1. Open `backend/config/db.php`.
+    2. Update the connection values to match your database server.
+    3. Restart your web server or PHP-FPM process if required.
+  </Accordion>
+</AccordionGroup>
+
+## Related pages
+
+<Columns cols={2}>
+  <Card title="Media Browser" icon="grid-2" href="/features/media-browser">
+    Understand how the frontend uses the API connection configured here.
+  </Card>
+  <Card title="Search & Filtering" icon="magnifying-glass" href="/features/search-filter">
+    See all endpoints called by the search and filter system.
+  </Card>
+</Columns>

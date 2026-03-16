@@ -1,0 +1,133 @@
+---
+title: "Search"
+description: "Search media items by title, description, category, or type using the GET /search.php endpoint."
+---
+
+## Endpoint
+
+```
+GET http://localhost/backend/api/search.php
+```
+
+Returns a JSON array of media items matching the supplied filters. Both parameters are optional — omitting them returns all media in the library.
+
+## Query parameters
+
+<ParamField query="query" type="string">
+  Free-text search term matched against `title`, `description`, and category `name` columns.
+
+  **Category signature filter:** if the value contains a `>` character, the query is treated as a category path filter instead of a full-text search. The string is split on `>` and each segment is matched against the category names in that position of the hierarchy (e.g. `"Heilkunde > Natur"`).
+</ParamField>
+
+<ParamField query="type" type="string">
+  Filter results to a single media type. Accepts the localized display values used by the frontend:
+
+  | Value | Maps to DB type |
+  |-------|-----------------|
+  | `Foto` | `image` |
+  | `Video` | `video` |
+  | `Sound` | `audio` |
+
+  Any other value is ignored and no type filter is applied.
+</ParamField>
+
+## Response
+
+HTTP `200` with a JSON array of media item objects. Returns an empty array `[]` on a database error rather than an HTTP error status.
+
+<ResponseField name="[]" type="MediaItem[]">
+  Array of media item objects.
+
+  <Expandable title="MediaItem properties" defaultOpen={true}>
+    <ResponseField name="id" type="string" required>
+      The primary key of the media record (`mediaID`).
+    </ResponseField>
+
+    <ResponseField name="title" type="string" required>
+      Display title of the media item.
+    </ResponseField>
+
+    <ResponseField name="description" type="string">
+      Optional description text. May be `null` if not set.
+    </ResponseField>
+
+    <ResponseField name="type" type="string" required>
+      Normalized media type: `"image"`, `"video"`, or `"audio"`.
+    </ResponseField>
+
+    <ResponseField name="signature" type="string" required>
+      Full category path for the item, with levels joined by ` > ` (e.g. `"Heilkunde > Natur"`). Empty string if the item has no categories.
+    </ResponseField>
+
+    <ResponseField name="url" type="string" required>
+      Path to the media file, derived from `file_path`.
+    </ResponseField>
+
+    <ResponseField name="thumbnail" type="string" required>
+      Path to the generated thumbnail image.
+    </ResponseField>
+
+    <ResponseField name="uploadDate" type="string">
+      ISO 8601 datetime string of when the item was uploaded (`upload_date`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+### curl
+
+<CodeGroup>
+
+```bash All media
+curl "http://localhost/backend/api/search.php"
+```
+
+```bash Free-text query
+curl "http://localhost/backend/api/search.php?query=Natur"
+```
+
+```bash Type filter
+curl "http://localhost/backend/api/search.php?type=Foto"
+```
+
+```bash Category signature
+curl "http://localhost/backend/api/search.php?query=Heilkunde+%3E+Natur"
+```
+
+```bash Combined
+curl "http://localhost/backend/api/search.php?query=Natur&type=Video"
+```
+
+</CodeGroup>
+
+### TypeScript
+
+```typescript
+import { searchMedia } from '@/lib/api-client';
+
+// All media
+const all = await searchMedia();
+
+// Free-text search
+const results = await searchMedia('Natur');
+
+// Filter by type
+const photos = await searchMedia('', 'Foto');
+
+// Category signature search
+const categorized = await searchMedia('Heilkunde > Natur');
+
+// Combined
+const videos = await searchMedia('Natur', 'Video');
+```
+
+## Category signature search
+
+<Note>
+When `query` contains `>`, the endpoint switches from full-text search to a **category path filter**. The string is split on `>`, whitespace is trimmed from each segment, and the segments are matched against the ordered category names in the database join.
+
+For example, `"Heilkunde > Natur"` returns all items whose category chain includes "Heilkunde" at the first level and "Natur" at the second level.
+</Note>
+
+To search for a literal `>` character as part of a title or description, you cannot — the presence of `>` always activates signature mode.
